@@ -103,5 +103,68 @@ async def chat(ctx):
     await ctx.send(answer)
 
 
+@bot.command()
+async def market_analysis(ctx):
+    API_KEY = os.getenv("COINMARKETCAP_API_KEY")
+    symbols = ["BTC", "ETH", "SOL", "BNB", "XRP", "ADA", "DOGE", "AVAX", "DOT", "MATIC"]
+    url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest"
+
+
+    params = {
+        "symbol": ",".join(symbols),
+        "convert": "USD",
+    }
+
+    headers = {
+        "Accept": "application/json",
+        "X-CMC_PRO_API_KEY": API_KEY,
+    }
+   
+
+    response = requests.get(url, params=params, headers=headers)
+    data = response.json()
+    crypto_info = {}
+
+
+    for symbol in symbols:
+        crypto_info[symbol] = {
+            "price": data["data"][symbol]["quote"]["USD"]["price"],
+            "last_updated": data["data"][symbol]["quote"]["USD"]["last_updated"],
+        }
+
+
+    prompt = (
+        "You are a professional cryptocurrency market analyst. I will give you the latest prices for the main cryptocurrencies, "
+        "and your task is to analyze the market situation, assess possible short-term and medium-term trends, and give your opinion "
+        "on potential risks and opportunities for investors.\n\n"
+        "Here are the latest market data:\n"
+    )
+
+    for symbol, info in crypto_info.items():
+        prompt += f"{symbol}: price: {info["price"]}, last updated: {info["last_updated"]}\n"
+
+    prompt += (
+        "\nPlease provide:\n"
+        "1. General market sentiment (bullish, bearish, or neutral).\n"
+        "2. Key observations from current price levels and volatility.\n"
+        "3. Short-term prediction (next 3–7 days) and possible catalysts.\n"
+        "4. Medium-term outlook (next 1–2 months).\n"
+        "5. Potential risks for investors right now.\n"
+        "6. Opportunities for profit if any.\n"
+        "Give your answer in a structured format."
+    )
+
+    response = client.chat.completions.create(
+        model="accounts/sentientfoundation/models/dobby-unhinged-llama-3-3-70b-new",
+        messages=[{"role": "system", "content": "You are a professional cryptocurrency market analyst."},
+                  {"role": "user", "content": prompt}]
+    )
+    answer = response.choices[0].message.content
+    await ctx.send(answer)
+    await ctx.send("‼️‼️Please note that the information provided in Dobby may be incomplete. This is not financial advice, but merely one example of how this model can be used.‼️‼️")
+
+
+
     
 bot.run(token, log_handler=handler, log_level=logging.DEBUG)
+
