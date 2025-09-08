@@ -2,17 +2,21 @@ import discord
 from discord.ext import commands
 import logging
 import json
+import requests
+from dotenv import load_dotenv
+import os
+from BD import create_connection, execute_query, execute_read_query
 
 from BD import create_connection, execute_query, execute_read_query
 
 
 from fireworks.client import Fireworks
 
-token = "UR_TOKEN_HERE"
+token = os.getenv("DISCORD_TOKEN")
 
 
 
-client = Fireworks(api_key="UR_API_KEY_HERE")
+client = Fireworks(api_key=os.getenv("AI_API_KEY"))
 
 
 create_users_table = """
@@ -167,4 +171,5 @@ async def market_analysis(ctx):
 
     
 bot.run(token, log_handler=handler, log_level=logging.DEBUG)
+
 
