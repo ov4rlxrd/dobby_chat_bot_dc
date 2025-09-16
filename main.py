@@ -14,7 +14,7 @@ from fireworks.client import Fireworks
 
 token = os.getenv("DISCORD_TOKEN")
 
-
+BEARER_TOKEN = os.getenv("BEARER_TOKEN")
 
 client = Fireworks(api_key=os.getenv("AI_API_KEY"))
 
@@ -40,7 +40,7 @@ bot = commands.Bot(command_prefix="/", intents=intents)
 async def on_ready():
     print(f"Bot is ready! Logged in as {bot.user.name}")
 
-
+# bot command when a new participant joins the server, the bot automatically analyzes their nickname.
 @bot.event
 async def on_member_join(member):
     channel = member.guild.system_channel 
@@ -79,7 +79,7 @@ async def on_member_join(member):
 
 
 
-
+# Using this command, participants can communicate with Dobby. Simply write the command followed by your request, and the bot will automatically save all messages to the database.
 @bot.command()
 async def chat(ctx):
     user_id = ctx.author.id
@@ -106,7 +106,53 @@ async def chat(ctx):
 
     await ctx.send(answer)
 
+# command where Dobby analyzes the text of a tweet
+@bot.command()
+async def tweet_details(ctx):
+    prompt = (
+        "You are a social media analyst. I will provide you with posts from Twitter (X)." 
+        "Your task is to:"
 
+        "1. Identify the main topic and context of the post. " 
+        "2. Determine the emotional tone (positive, neutral, negative).  "
+        "3. Define the target audience (e.g., investors, fans, project community, general public, etc.)."
+        "4. Summarize the post in 1–2 sentences.  "
+        "5. (Optional) Suggest an idea for a reply or retweet if appropriate."
+        "Post text is below:\n"
+    )
+
+    text = get_tweet_text(ctx.message.content)
+    prompt+=text
+
+    response = client.chat.completions.create(
+        model="accounts/sentientfoundation/models/dobby-unhinged-llama-3-3-70b-new",
+        messages=[{"role": "system", "content": "You are a social media analyst"},
+                  {"role": "user", "content": prompt}]
+    )
+
+    await ctx.send(response.choices[0].message.content)
+
+# function that extracts text from a tweet
+def get_tweet_text(url):
+    tweet_id = url.strip("/").split("/")[-1]
+
+
+    endpoint = f"https://api.twitter.com/2/tweets/{tweet_id}?tweet.fields=created_at,author_id"
+
+    headers = {
+        "Authorization": f"Bearer {BEARER_TOKEN}"
+    }
+
+    response = requests.get(endpoint, headers=headers)
+
+    data = response.json()
+    return data["data"]["text"]
+
+
+
+
+
+# A command where Dobby analyzes the market and provides its analysis, coin prices are transmitted via the CoinMarketCap API
 @bot.command()
 async def market_analysis(ctx):
     API_KEY = os.getenv("COINMARKETCAP_API_KEY")
@@ -171,5 +217,6 @@ async def market_analysis(ctx):
 
     
 bot.run(token, log_handler=handler, log_level=logging.DEBUG)
+
 
 
